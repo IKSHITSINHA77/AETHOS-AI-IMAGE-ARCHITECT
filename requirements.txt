@@ -1,0 +1,8 @@
+flask
+ultralytics
+transformers
+torch
+pillow
+pytesseract
+opencv-python
+geopy

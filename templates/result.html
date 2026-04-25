@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Report — Aethos</title>
+  <meta name="description"
+    content="Structured agent report: plan, model chain, critic score, and knowledge enrichment.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+</head>
+
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <a href="/" class="nav-logo" id="nav-logo-result">
+      <img src="{{ url_for('static', filename='favicon.png') }}" alt="Logo" class="nav-logo-img">
+      Aethos
+      <span class="nav-badge">AGENT</span>
+    </a>
+    <div class="nav-pill">
+      <a href="/#console">Console</a>
+      <a href="/#pipeline">Pipeline</a>
+      <a href="/#capabilities">Models</a>
+      <a href="#" id="nav-docs-result">Docs</a>
+    </div>
+    <div class="nav-actions">
+      <a href="/" class="btn-primary" style="text-decoration:none;" id="btn-new-run">New Run +</a>
+    </div>
+  </nav>
+
+  <!-- ===== RESULT LAYOUT ===== -->
+  <section class="result-layout">
+    <div class="section-inner">
+
+      <!-- Back Link -->
+      <a href="/" class="back-link" id="back-link">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back to Console
+      </a>
+
+      <!-- Header -->
+      <p class="eyebrow" style="margin-bottom:0.6rem;">Agent Report</p>
+      <h1 class="pipeline-title fade-up" style="margin-bottom:0.6rem;">
+        {% if agent.mode == 'audit' %}
+        Quality Audit <span class="pipeline-title-muted">Complete</span>
+        {% elif agent.mode == 'orchestrate' %}
+        Orchestration <span class="pipeline-title-muted">Plan Ready</span>
+        {% elif agent.mode == 'brand' %}
+        Brand Adaptation <span class="pipeline-title-muted">Ready</span>
+        {% else %}
+        Analysis <span class="pipeline-title-muted">Complete</span>
+        {% endif %}
+      </h1>
+      <p class="pipeline-subtitle fade-up" style="margin-bottom:3rem;">
+        3-phase agent pipeline executed successfully.
+        {% if agent.critic.verdict == 'refine' %}
+        Critic Loop triggered refinements.
+        {% else %}
+        Output passed Critic threshold (≥ 8.0).
+        {% endif %}
+      </p>
+
+      <!-- ─── Main Grid: Image + Agent Card ─── -->
+      <div style="display:grid;grid-template-columns:340px 1fr;gap:2rem;align-items:start;margin-bottom:2rem;">
+
+        <!-- Left: Uploaded Image + Meta -->
+        {% if filename %}
+        <div style="display:flex;flex-direction:column;gap:1.2rem;" class="fade-up">
+          <div
+            style="border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);background:var(--surface-3);">
+            <img src="{{ url_for('static', filename='uploads/' + filename) }}" alt="Analyzed image"
+              style="width:100%;display:block;object-fit:contain;max-height:320px;">
+          </div>
+          <div
+            style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem;">
+            <div
+              style="font-family:var(--mono);font-size:0.7rem;color:var(--text-muted);margin-bottom:0.6rem;letter-spacing:0.06em;text-transform:uppercase;">
+              File Info</div>
+            <div style="font-weight:700;color:var(--white);font-size:0.88rem;margin-bottom:0.3rem;">📁 {{ filename }}
+            </div>
+            <div style="font-family:var(--mono);font-size:0.72rem;color:var(--text-muted);">
+              Mode: <span style="color:var(--accent-purple);">/{{ agent.mode }}</span><br>
+              Models: {{ agent.models_used | length }} active
+            </div>
+          </div>
+          <a href="/" class="execute-btn" style="text-decoration:none;" id="analyze-another-btn">
+            ← Analyze Another
+          </a>
+        </div>
+        {% endif %}
+
+        <!-- Right: Agent Card -->
+        <div class="fade-up">
+          <div class="agent-card">
+
+            <!-- Card Header -->
+            <div class="agent-card-header">
+              <div class="agent-mode-badge">/{{ agent.mode }}</div>
+              <div class="agent-card-title">Structured Agent Response</div>
+              <div style="margin-left:auto;">
+                <button class="result-copy" id="copy-btn" onclick="copyReport()">
+                  <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                      d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                  </svg>
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            <!-- Card Body -->
+            <div class="agent-card-body" id="agent-report-content">
+
+              <!-- ──── 1. PLAN ──── -->
+              {% if agent.plan.sub_tasks %}
+              <div class="plan-section">
+                <div class="plan-label">📋 Plan — {{ agent.plan.goal_type | replace('_', ' ') | title }}</div>
+                <div class="plan-steps">
+                  {% for s in agent.plan.sub_tasks %}
+                  <div class="plan-step">
+                    <div class="plan-step-num">{{ loop.index }}</div>
+                    <div class="plan-step-info">
+                      <div class="plan-step-task">{{ s.task }}</div>
+                      <div class="plan-step-desc">{{ s.desc }}</div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- ──── 2. MODELS USED ──── -->
+              {% if agent.models_used %}
+              <div class="models-section">
+                <div class="plan-label">🤖 Models Used</div>
+                <div class="models-chips">
+                  {% for m in agent.models_used %}
+                  <div class="model-chip" title="{{ m.role }}">
+                    <span class="model-chip-icon">{{ m.icon }}</span>
+                    <span class="model-chip-name">{{ m.name }}</span>
+                    <span class="model-chip-role">— {{ m.role }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- ──── 3. RESULT — Core Analysis ──── -->
+              <div class="analysis-section">
+                <div class="plan-label">🔬 The Result</div>
+
+                {% if objects %}
+                <div class="result-block">
+                  <div class="result-label">🎯 Objects Detected</div>
+                  <div class="tag-row">
+                    {% for obj in objects %}
+                    <span class="tag">{{ obj | title }}</span>
+                    {% endfor %}
+                  </div>
+                </div>
+                {% else %}
+                <div class="result-block">
+                  <div class="result-label">🎯 Objects Detected</div>
+                  <div class="result-text" style="font-style:italic;">No objects detected above confidence threshold.
+                  </div>
+                </div>
+                {% endif %}
+
+                {% if caption %}
+                <div class="result-block">
+                  <div class="result-label">💬 AI Caption</div>
+                  <div class="result-text">{{ caption | capitalize }}</div>
+                </div>
+                {% endif %}
+
+                {% if text and text.strip() %}
+                <div class="result-block">
+                  <div class="result-label">📝 Extracted Text</div>
+                  <div class="result-text-mono">{{ text }}</div>
+                </div>
+                {% endif %}
+              </div>
+
+              <!-- ──── 4. CRITIC SCORE ──── -->
+              {% if agent.critic %}
+              <div class="critic-section">
+                <div class="plan-label">🔍 Critic Loop — Phase 3 Evaluation</div>
+                <div class="critic-row">
+
+                  <!-- Gauge -->
+                  <div class="critic-gauge-wrap">
+                    <svg class="critic-gauge-svg" viewBox="0 0 90 90">
+                      <circle class="critic-gauge-track" cx="45" cy="45" r="35" />
+                      <circle class="critic-gauge-fill" id="critic-fill" cx="45" cy="45" r="35"
+                        data-score="{{ agent.critic.score }}" data-verdict="{{ agent.critic.verdict }}" />
+                    </svg>
+                    <div class="critic-gauge-label">
+                      <div class="critic-score-num" id="critic-num">0</div>
+                      <div class="critic-score-max">/10</div>
+                    </div>
+                  </div>
+
+                  <!-- Info -->
+                  <div class="critic-info">
+                    <div
+                      class="critic-verdict {{ 'verdict-pass' if agent.critic.verdict == 'pass' else 'verdict-refine' }}">
+                      {% if agent.critic.verdict == 'pass' %}✓ PASSED{% else %}⚡ REFINE{% endif %}
+                    </div>
+
+                    <!-- Breakdown bars -->
+                    <div class="critic-breakdown">
+                      {% for key, val in agent.critic.breakdown.items() %}
+                      {% set max_map = {'caption_quality': 4, 'object_confidence': 3, 'text_extraction': 2,
+                      'object_diversity': 1} %}
+                      <div class="breakdown-row">
+                        <span class="breakdown-label">{{ key | replace('_', ' ') | title }}</span>
+                        <div class="breakdown-bar-wrap">
+                          <div class="breakdown-bar" style="width: {{((val / max_map.get(key, 4)) * 100) | int }}%">
+                          </div>
+                        </div>
+                        <span class="breakdown-val">{{ val }}</span>
+                      </div>
+                      {% endfor %}
+                    </div>
+
+                    <!-- Notes -->
+                    {% if agent.critic.notes %}
+                    <div class="critic-notes">
+                      {% for note in agent.critic.notes %}
+                      <div class="critic-note">{{ note }}</div>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Refinements triggered -->
+                    {% if agent.critic.refinements %}
+                    <div style="margin-top:0.75rem;">
+                      <div
+                        style="font-family:var(--mono);font-size:0.68rem;color:var(--critic-amber);font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.4rem;">
+                        Refinements Triggered</div>
+                      {% for r in agent.critic.refinements %}
+                      <div class="refinement-item">{{ r }}</div>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </div>
+
+                </div>
+              </div>
+              {% endif %}
+
+              <!-- ──── 5. NEXT STEP SUGGESTION ──── -->
+              {% if agent.next_step %}
+              <div class="next-step-card">
+                <div class="next-step-icon">💡</div>
+                <div>
+                  <div class="next-step-label">Next Step Suggestion</div>
+                  <div class="next-step-text">{{ agent.next_step }}</div>
+                </div>
+              </div>
+              {% endif %}
+
+            </div><!-- /card-body -->
+          </div><!-- /agent-card -->
+        </div><!-- /right col -->
+
+      </div><!-- /main grid -->
+
+    </div>
+  </section>
+
+  <!-- ===== WIKIPEDIA DEEP-DIVE SECTION ===== -->
+  {% if wiki_data %}
+  <section class="wiki-section">
+    <div class="wiki-inner">
+      <p class="wiki-eyebrow">Knowledge Enrichment</p>
+      <h2 class="wiki-heading fade-up">
+        Wikipedia Deep-Dive<br>
+        <span style="color:var(--text-muted);">on detected objects</span>
+      </h2>
+      <p class="wiki-subheading fade-up">
+        Live Wikipedia context pulled for each identified entity.
+      </p>
+
+      {% for item in wiki_data %}
+      <div class="wiki-card fade-up">
+        <div class="wiki-card-inner">
+          {% if item.thumbnail %}
+          <img src="{{ item.thumbnail }}" alt="{{ item.title }}" class="wiki-thumb">
+          {% else %}
+          <div class="wiki-thumb-placeholder">{{ item.label[0] | upper }}</div>
+          {% endif %}
+
+          <div class="wiki-body">
+            <div class="wiki-label">Detected: {{ item.label | title }}</div>
+            <div class="wiki-title">{{ item.title }}</div>
+
+            {% if item.extract %}
+            <div class="wiki-extract">{{ item.extract }}</div>
+            {% else %}
+            <div class="wiki-no-data">No Wikipedia article found for "{{ item.label }}".</div>
+            {% endif %}
+
+            {% if item.url %}
+            <a href="{{ item.url }}" target="_blank" rel="noopener" class="wiki-read-more">
+              Read on Wikipedia
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                <polyline points="15 3 21 3 21 9" />
+                <line x1="10" y1="14" x2="21" y2="3" />
+              </svg>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ===== CTA BOTTOM ===== -->
+  <section style="background:var(--black);padding:6rem 2rem;text-align:center;border-top:1px solid var(--border);">
+    <p class="eyebrow" style="margin-bottom:1rem;">Run Again</p>
+    <h2 style="font-size:clamp(2rem,5vw,3.5rem);font-weight:900;letter-spacing:-0.04em;color:#fff;margin-bottom:2rem;">
+      Try another<br>
+      <span style="color:var(--text-muted);">agent command.</span>
+    </h2>
+    <a href="/" id="cta-back-btn"
+      style="display:inline-flex;align-items:center;gap:0.5rem;background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;text-decoration:none;border-radius:100px;padding:1rem 2.5rem;font-size:1rem;font-weight:700;font-family:var(--font);transition:opacity 0.2s;box-shadow:0 0 30px rgba(124,58,237,0.3);"
+      onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+      Launch Console →
+    </a>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="footer-copy">© 2025 Aethos · Agent v2.0 · YOLOv8 · BLIP · Tesseract · Wikipedia</div>
+    <div class="footer-links">
+      <a href="#" id="footer-docs-r">Docs</a>
+      <a href="#" id="footer-github-r">GitHub</a>
+      <a href="#" id="footer-api-r">API</a>
+    </div>
+  </footer>
+
+  <script>
+    /* ─── Critic Gauge Animation ──────────────────────────────────── */
+    (function () {
+      const fill = document.getElementById('critic-fill');
+      const numEl = document.getElementById('critic-num');
+      if (!fill) return;
+
+      const score = parseFloat(fill.dataset.score) || 0;
+      const verdict = fill.dataset.verdict || 'pass';
+      const radius = 35;
+      const circ = 2 * Math.PI * radius; // ≈ 219.9
+
+      // Color by score
+      const color = score >= 8
+        ? '#10b981'   // green
+        : score >= 5
+          ? '#f59e0b'   // amber
+          : '#ef4444';  // red
+
+      fill.style.stroke = color;
+      document.querySelector('.critic-score-num').style.color = color;
+
+      // Animate on load
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const dashOffset = circ - (score / 10) * circ;
+          fill.style.strokeDasharray = circ;
+          fill.style.strokeDashoffset = dashOffset;
+
+          // Count-up number
+          let current = 0;
+          const step = score / 40;
+          const timer = setInterval(() => {
+            current += step;
+            if (current >= score) { current = score; clearInterval(timer); }
+            numEl.textContent = current.toFixed(1);
+          }, 25);
+        }, 400);
+      });
+    })();
+
+    /* ─── Copy Report ─────────────────────────────────────────────── */
+    function copyReport() {
+      const el = document.getElementById('agent-report-content');
+      const btn = document.getElementById('copy-btn');
+      if (!el) return;
+      navigator.clipboard.writeText(el.innerText).then(() => {
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => {
+          btn.innerHTML = `<svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copy`;
+        }, 2500);
+      });
+    }
+
+    /* ─── Scroll-triggered fade-up ───────────────────────────────── */
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(el => { if (el.isIntersecting) el.target.classList.add('visible'); });
+    }, { threshold: 0.07 });
+    document.querySelectorAll('.fade-up').forEach(el => obs.observe(el));
+  </script>
+
+</body>
+
+</html>
