@@ -2,7 +2,6 @@
 ![Flask](https://img.shields.io/badge/Flask-2.0%2B-green)
 ![AI](https://img.shields.io/badge/AI-Computer%20Vision-orange)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-
 # AETHOS: Agentic Image Architect
 
 A sophisticated, multi-stage AI orchestration system designed to manage complex creative workflows through a terminal-inspired interface. It integrates state-of-the-art machine learning models for object detection, image captioning, and OCR, coordinated by a deterministic "Critic Loop" agent.
